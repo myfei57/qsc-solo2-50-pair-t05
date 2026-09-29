@@ -26,6 +26,7 @@ limits:
     tolerance_c: 2.0
     warmup_rate_c_per_min: 6.0
     confirm_hold_s: 60.0
+    confirm_max_age_s: 1800.0
     max_cavity_spread_c: 3.0
   timer:
     default_nominal_s: 600.0

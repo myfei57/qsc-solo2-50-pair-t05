@@ -159,12 +159,13 @@ class SteamLimits:
 
 @dataclass(frozen=True)
 class TempLimits:
-    """模温目标、容差与确认保持时长。"""
+    """模温目标、容差与确认保持／有效期。"""
 
     setpoint_c: float
     tolerance_c: float
     warmup_rate_c_per_min: float
     confirm_hold_s: float
+    confirm_max_age_s: float
     max_cavity_spread_c: float
 
     @classmethod
@@ -174,6 +175,7 @@ class TempLimits:
             tolerance_c=_number(section, "tolerance_c", minimum=0.0),
             warmup_rate_c_per_min=_number(section, "warmup_rate_c_per_min", minimum=0.1),
             confirm_hold_s=_number(section, "confirm_hold_s", minimum=1.0),
+            confirm_max_age_s=_number(section, "confirm_max_age_s", minimum=1.0),
             max_cavity_spread_c=_number(section, "max_cavity_spread_c", minimum=0.0),
         )
         return limits
@@ -193,6 +195,7 @@ class TempLimits:
             "tolerance_c": self.tolerance_c,
             "warmup_rate_c_per_min": self.warmup_rate_c_per_min,
             "confirm_hold_s": self.confirm_hold_s,
+            "confirm_max_age_s": self.confirm_max_age_s,
             "max_cavity_spread_c": self.max_cavity_spread_c,
         }
 
@@ -368,6 +371,7 @@ def default_config() -> PlatformConfig:
             tolerance_c=2.0,
             warmup_rate_c_per_min=6.0,
             confirm_hold_s=60.0,
+            confirm_max_age_s=1800.0,
             max_cavity_spread_c=3.0,
         ),
         timer=TimerLimits(default_nominal_s=600.0, shortfall_ratio=0.05, overrun_ratio=0.08),

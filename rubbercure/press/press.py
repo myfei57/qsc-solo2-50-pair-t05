@@ -77,9 +77,19 @@ class CuringPress:
         return self._state.transition(target)
 
     def load_mold(self, mold_id: str) -> dict:
-        """装模：把模具挂到本机。"""
+        """装模：把模具挂到本机。
+
+        换上与当前落盘确认不同的模具时，旧确认立即作废——确认是跟着具体
+        模具走的，上一副模具的温度确认不能留给下一副。重启后装回同一副
+        模具且确认仍在有效期内时不作废，由落盘记录继续担保。
+        """
 
         with self._lock:
+            prior = self.temp_persister.latest()
+            if prior is not None and prior.mold_id != mold_id:
+                self.temp_persister.invalidate(
+                    f"换模：{prior.mold_id} → {mold_id}，模温确认作废"
+                )
             self.transition(PressPhase.MOLD_LOADED)
             self._mold_id = mold_id
         self.bus.publish(

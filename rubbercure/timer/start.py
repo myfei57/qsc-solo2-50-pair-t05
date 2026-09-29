@@ -1,8 +1,9 @@
 """硫化计时启动。
 
-计时启动的唯一前置条件是"模温确认已落盘"。这条约束把温度回路与计时回路
-绑在一起：没有落盘确认就启动计时，等于在模具还没到温的情况下开始计时，
-制品必然欠硫。启动动作在动作前强制校验，校验不通过直接拒绝并写审计。
+计时启动的唯一前置条件是"模温确认已落盘且仍在有效期内"。这条约束把温度
+回路与计时回路绑在一起：没有落盘确认、确认已经超期或者确认属于另一副
+模具就启动计时，等于在模具还没到温（或已换模）的情况下开始计时，制品
+必然欠硫。启动动作在动作前强制校验，校验不通过直接拒绝并写审计。
 """
 
 from __future__ import annotations
@@ -46,6 +47,7 @@ def start_cure(
             planned_s=round(planned_s, 3),
             curve_generation=generation,
             temp_confirmation_digest=confirmation.digest[:12],
+            temp_confirmation_expires_at=round(confirmation.expires_at, 3),
         )
     )
     return started
