@@ -159,13 +159,14 @@ class SteamLimits:
 
 @dataclass(frozen=True)
 class TempLimits:
-    """模温目标、容差与确认保持时长。"""
+    """模温目标、容差、确认保持时长与确认有效期。"""
 
     setpoint_c: float
     tolerance_c: float
     warmup_rate_c_per_min: float
     confirm_hold_s: float
     max_cavity_spread_c: float
+    confirm_ttl_s: float
 
     @classmethod
     def from_mapping(cls, section: Mapping[str, Any]) -> "TempLimits":
@@ -175,6 +176,7 @@ class TempLimits:
             warmup_rate_c_per_min=_number(section, "warmup_rate_c_per_min", minimum=0.1),
             confirm_hold_s=_number(section, "confirm_hold_s", minimum=1.0),
             max_cavity_spread_c=_number(section, "max_cavity_spread_c", minimum=0.0),
+            confirm_ttl_s=_number(section, "confirm_ttl_s", minimum=1.0),
         )
         return limits
 
@@ -194,6 +196,7 @@ class TempLimits:
             "warmup_rate_c_per_min": self.warmup_rate_c_per_min,
             "confirm_hold_s": self.confirm_hold_s,
             "max_cavity_spread_c": self.max_cavity_spread_c,
+            "confirm_ttl_s": self.confirm_ttl_s,
         }
 
 
@@ -369,6 +372,7 @@ def default_config() -> PlatformConfig:
             warmup_rate_c_per_min=6.0,
             confirm_hold_s=60.0,
             max_cavity_spread_c=3.0,
+            confirm_ttl_s=1800.0,
         ),
         timer=TimerLimits(default_nominal_s=600.0, shortfall_ratio=0.05, overrun_ratio=0.08),
         cool=CoolLimits(

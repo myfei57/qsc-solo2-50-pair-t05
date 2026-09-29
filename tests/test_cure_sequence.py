@@ -114,3 +114,79 @@ def test_timer_starts_once_confirmation_is_durable(platform, tmp_path, clock):
     assert started["planned_s"] == 600.0
     assert unit.timer.phase.value == "curing"
     assert isinstance(TempController(kp=1.0, ki=0.1, output_min=-1.0, output_max=1.0).snapshot(), dict)
+
+
+def test_timer_refuses_when_confirmation_is_expired(platform, clock):
+    unit = platform.press("press-01")
+    unit.temp_persister.confirm(
+        MoldTempReading(
+            mold_id="mold-TTL",
+            generation=1,
+            sampled_at=clock.now(),
+            by_cavity={0: platform.config.temp.setpoint_c},
+        ),
+        platform.config.temp.confirm_hold_s,
+    )
+    clock.advance(platform.config.temp.confirm_ttl_s + 1.0)
+    with pytest.raises(InterlockError, match="超过有效期"):
+        start_cure(
+            unit.timer,
+            unit.temp_persister,
+            "mold-TTL",
+            600.0,
+            platform.bus,
+            mapping_generation=1,
+        )
+
+
+def test_timer_refuses_when_mapping_generation_moved_on(platform, clock):
+    unit = platform.press("press-02")
+    unit.temp_persister.confirm(
+        MoldTempReading(
+            mold_id="mold-NG",
+            generation=1,
+            sampled_at=clock.now(),
+            by_cavity={0: platform.config.temp.setpoint_c},
+        ),
+        platform.config.temp.confirm_hold_s,
+    )
+    # 换探头重新登记映射，代际推进：旧确认必须重写
+    platform.register_mold("mold-NG", cavity_count=1)
+    first_generation = platform.maps.latest_for("mold-NG").generation
+    platform.remap_sensor("mold-NG", {0: "mold-NG-NEW"})
+    new_generation = platform.maps.latest_for("mold-NG").generation
+    assert new_generation > first_generation
+    with pytest.raises(InterlockError, match=f"第 {new_generation} 代"):
+        start_cure(
+            unit.timer,
+            unit.temp_persister,
+            "mold-NG",
+            600.0,
+            platform.bus,
+            mapping_generation=new_generation,
+        )
+
+
+def test_re_curing_another_mold_after_load_requires_new_confirmation(platform):
+    unit = platform.press("press-01")
+    unit.load_mold("mold-A1")
+    unit.temp_persister.confirm(
+        MoldTempReading(
+            mold_id="mold-A1",
+            generation=1,
+            sampled_at=platform.clock.now(),
+            by_cavity={0: platform.config.temp.setpoint_c},
+        ),
+        platform.config.temp.confirm_hold_s,
+    )
+    # 已经换模，却还试图拿旧确认直接启动计时
+    unit.load_mold("mold-A2")
+    with pytest.raises(InterlockError, match="尚未落盘"):
+        start_cure(
+            unit.timer,
+            unit.temp_persister,
+            "mold-A2",
+            600.0,
+            platform.bus,
+            mapping_generation=1,
+        )

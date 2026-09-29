@@ -77,11 +77,19 @@ class CuringPress:
         return self._state.transition(target)
 
     def load_mold(self, mold_id: str) -> dict:
-        """装模：把模具挂到本机。"""
+        """装模：把模具挂到本机。
+
+        换模（在机模具与新装模具不同）时上一份模温确认立即作废：它属于
+        旧模具，既不可能覆盖新模具，也可能早已过期。同一台模具重复装模
+        （例如顺序重跑）不动现有确认，由 TTL 与代际校验兜底。
+        """
 
         with self._lock:
+            previous = self._mold_id
             self.transition(PressPhase.MOLD_LOADED)
             self._mold_id = mold_id
+            if previous is not None and previous != mold_id:
+                self.temp_persister.invalidate(reason=f"换模：{previous} → {mold_id}")
         self.bus.publish(
             Event.of("press", "press", "mold_loaded", subject=mold_id, press_id=self.press_id)
         )

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import threading
 from ..config import TempLimits
+from ..errors import InterlockError
 from ..eventbus import Event, EventBus
 from ..steam.steam import SteamUnit
 from .controller import TempController
@@ -103,8 +104,18 @@ class TempLoop:
 
         return self.persister.confirm(reading, hold_s)
 
-    def is_confirmed(self) -> bool:
-        return self.persister.is_durable()
+    def is_confirmed(self, mold_id: str | None = None, generation: int | None = None) -> bool:
+        """确认已落盘、未过期，且（给定时）属于当前模具与映射代际。"""
+
+        if not self.persister.is_durable():
+            return False
+        if mold_id is None:
+            return True
+        try:
+            self.persister.require_durable(mold_id, generation)
+        except InterlockError:
+            return False
+        return True
 
     def warmup_trace(self) -> dict:
         with self._lock:

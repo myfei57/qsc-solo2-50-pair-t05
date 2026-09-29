@@ -27,6 +27,7 @@ limits:
     warmup_rate_c_per_min: 6.0
     confirm_hold_s: 60.0
     max_cavity_spread_c: 3.0
+    confirm_ttl_s: 1800.0
   timer:
     default_nominal_s: 600.0
     shortfall_ratio: 0.05

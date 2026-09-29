@@ -153,6 +153,7 @@ class CureSequence:
             self.bus,
             product_code=profile.product_code,
             generation=profile.curve_generation,
+            mapping_generation=reading.generation,
         )
         self.recorder.note(
             "timer_start",
@@ -160,7 +161,7 @@ class CureSequence:
             mold_id=plan.mold_id,
             planned_s=started["planned_s"],
             curve_generation=started["curve_generation"],
-            confirmed=press.temp_loop.is_confirmed(),
+            confirmed=press.temp_loop.is_confirmed(plan.mold_id, reading.generation),
         )
         press.transition(PressPhase.CURING)
         return self.report(plan, warmup)
